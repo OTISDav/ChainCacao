@@ -1,0 +1,12 @@
+Django
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+web3
+qrcode[pil]
+cloudinary
+python-decouple
+django-cors-headers
+pytest-django
+dj-database-url
+pillow
