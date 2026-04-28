@@ -5,6 +5,7 @@ from users.models import User
 
 
 class Lot(models.Model):
+
     ESPECES = [
         ('forastero',  'Forastero'),
         ('trinitario', 'Trinitario'),
@@ -20,32 +21,57 @@ class Lot(models.Model):
         ('exporte',    'Exporté'),
     ]
 
-    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    agriculteur   = models.ForeignKey(User, on_delete=models.PROTECT, related_name='lots')
-    espece        = models.CharField(max_length=20, choices=ESPECES)
-    poids_kg      = models.FloatField()
-    gps_latitude  = models.FloatField()
+    # ───────── IDENTIFIANT ─────────
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # ───────── RELATION ─────────
+    agriculteur = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='lots'
+    )
+
+    # ───────── DONNÉES MÉTIER ─────────
+    espece = models.CharField(max_length=20, choices=ESPECES)
+    poids_kg = models.FloatField()
+    gps_latitude = models.FloatField()
     gps_longitude = models.FloatField()
-    date_recolte  = models.DateField()
-    photo         = models.ImageField(upload_to='lots/', blank=True, null=True)
-    notes         = models.TextField(blank=True)
-    statut        = models.CharField(max_length=20, choices=STATUTS, default='cree')
+    date_recolte = models.DateField()
+    photo = models.ImageField(upload_to='lots/', blank=True, null=True)
+    notes = models.TextField(blank=True)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='cree')
 
-    qr_code = models.TextField(blank=True, null=True)
+    # ───────── BLOCKCHAIN ─────────
+    tx_hash = models.CharField(max_length=100, blank=True)
+    block_number = models.IntegerField(null=True, blank=True)
 
+    blockchain_status = models.CharField(
+        max_length=20,
+        default="pending"
+    )
+    retry_count = models.IntegerField(default=0)
 
+    # 🔥 hash du lot (audit / EUDR / anti-fake)
+    data_hash = models.CharField(max_length=256, blank=True)
 
-    # Données blockchain (remplies après enregistrement)
-    tx_hash       = models.CharField(max_length=100, blank=True)
-    block_number  = models.IntegerField(null=True, blank=True)
+    # ───────── CLOUDINARY ─────────
+    certificat_url = models.URLField(blank=True, null=True)
+    qr_code_url = models.URLField(blank=True, null=True)
 
-    created_at    = models.DateTimeField(auto_now_add=True)
-    updated_at    = models.DateTimeField(auto_now=True)
+    # ───────── TIMESTAMP ─────────
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    # ───────── LOGIQUE HASH ─────────
     def calculer_hash(self):
-        """Génère un hash unique des données du lot pour la blockchain."""
         data = f"{self.id}{self.gps_latitude}{self.gps_longitude}{self.poids_kg}{self.date_recolte}{self.agriculteur_id}"
         return hashlib.sha256(data.encode()).hexdigest()
+
+    def save(self, *args, **kwargs):
+        # auto-save hash (optionnel mais propre)
+        if not self.data_hash:
+            self.data_hash = self.calculer_hash()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Lot {self.id} — {self.espece} {self.poids_kg}kg"

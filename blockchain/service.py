@@ -42,7 +42,7 @@ class BlockchainService:
         tx = fn.build_transaction({
             'from': self.account.address,
             'nonce': self.w3.eth.get_transaction_count(self.account.address),
-            'gas': 300000,  # 🔥 un peu plus safe
+            'gas': 150000,  # 🔥 un peu plus safe
             'gasPrice': self.w3.eth.gas_price,
             'chainId': config('CHAIN_ID', cast=int)  # 🔥 FIX IMPORTANT
         })
@@ -54,8 +54,11 @@ class BlockchainService:
         return receipt.transactionHash.hex()
 
     def enregistrer_lot(self, lot_id: str, hash_donnees: str) -> str:
+        # if not self.connected:
+        #     return ""
+
         if not self.connected:
-            return ""
+            raise Exception("Blockchain not connected")
         try:
             fn = self.contract.functions.creerLot(lot_id, hash_donnees)
             tx_hash = self._build_and_send(fn)
@@ -64,6 +67,10 @@ class BlockchainService:
         except Exception as e:
             print(f"❌ Erreur enregistrer_lot : {e}")
             return ""
+
+        # except Exception as e:
+        #     print(f"❌ Erreur enregistrer_lot : {e}")
+        #     raise Exception(f"Blockchain failed: {str(e)}")
 
     def enregistrer_transfert(self, lot_id: str, etape: str, user_id: int) -> str:
         if not self.connected:
